@@ -17,6 +17,11 @@
 
 #include <MCP23017_Buttons.h>
 #include <Preferences.h>
+
+#include <Wire.h>
+#include <Adafruit_ADS1X15.h>
+Adafruit_ADS1115 ads;
+
 Preferences preferences;
 
 float frequency_memory = 0;
@@ -111,6 +116,8 @@ String MenuPages[8]{};
 Timer clocks;
 // Keyboard keyb;
 
+int adc;
+
 void setup()
 {
   Serial.begin(115200);
@@ -162,12 +169,29 @@ void setup()
   menu.DrawData(day(), month(), year());
   menu.DrawTime(hour(), minute(), second());
   preferences.end();
+
+
+  // Модуль 16-битного АЦП ADS1115 
+  // ВОЗМОЖНЫЕ ВАРИАНТЫ УСТАНОВКИ КУ:
+  // ads.setGain(GAIN_TWOTHIRDS); | 2/3х | +/-6.144V | 1bit = 0.1875mV    |
+  // ads.setGain(GAIN_ONE);       | 1х   | +/-4.096V | 1bit = 0.125mV     |
+  // ads.setGain(GAIN_TWO);       | 2х   | +/-2.048V | 1bit = 0.0625mV    |
+  // ads.setGain(GAIN_FOUR);      | 4х   | +/-1.024V | 1bit = 0.03125mV   |
+  // ads.setGain(GAIN_EIGHT);     | 8х   | +/-0.512V | 1bit = 0.015625mV  |
+  // ads.setGain(GAIN_SIXTEEN);   | 16х  | +/-0.256V | 1bit = 0.0078125mV |
+  ads.setGain(GAIN_TWOTHIRDS);
+  ads.begin();
 }
 
 void loop()
 {
   enc1.tick();
   enc2.tick();
+
+  // считываем с АЦП ADS1115 
+  adc = ads.readADC_SingleEnded(0); // (0) - номер канала
+  float u = float(adc) * 0.1875 / 1000.0;
+
   preferences.begin("memory", false);
   ArduinoOTA.handle();
 
