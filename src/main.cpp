@@ -388,12 +388,14 @@ void loop()
     {
       pageCounter++;
       pageCounter = (pageCounter > 8) ? 1 : pageCounter;
+      pageCounter = (pageCounter > 4 && pageCounter < 8) ? 8 : pageCounter; //убирает пустую прокрутку
       SubMenuflag = true;
     }
     else if (enc2.left())
     {
       pageCounter--;
       pageCounter = (pageCounter < 1) ? 8 : pageCounter;
+      pageCounter = (pageCounter > 4 && pageCounter < 8) ? 4 : pageCounter; //убирает пустую прокрутку
       SubMenuflag = true;
     }
   }
