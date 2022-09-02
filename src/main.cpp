@@ -67,6 +67,13 @@ bool SubMenuDraw = false;
 bool MainMenuDraw = true;
 bool SubMenuflag = false;
 bool MainMenuflag = false;
+extern bool set_flag;
+extern int last_state;
+extern bool full_clear;
+
+bool menuState = false;
+
+int SubSettings = 1;
 int MenuLevel = 0;
 int pageCounter = 1;
 
@@ -110,7 +117,6 @@ String OldData;
 
 String MQTT = "MQTT - N/A";
 String OldMQTT;
-String MenuPages[8]{};
 
 // Menu menu;
 Timer clocks;
@@ -122,11 +128,7 @@ void setup()
 {
   Serial.begin(115200);
   Serial.println("1");
-  MenuPages[0] = "Main Sett.";
-  MenuPages[1] = "Mod Freq.";
-  MenuPages[2] = "Memory";
-  MenuPages[3] = "Resonance";
-  MenuPages[7] = "Settings";
+
   pinMode(34, INPUT);
 
   preferences.begin("memory", false);
@@ -170,8 +172,7 @@ void setup()
   menu.DrawTime(hour(), minute(), second());
   preferences.end();
 
-
-  // Модуль 16-битного АЦП ADS1115 
+  // Модуль 16-битного АЦП ADS1115
   // ВОЗМОЖНЫЕ ВАРИАНТЫ УСТАНОВКИ КУ:
   // ads.setGain(GAIN_TWOTHIRDS); | 2/3х | +/-6.144V | 1bit = 0.1875mV    |
   // ads.setGain(GAIN_ONE);       | 1х   | +/-4.096V | 1bit = 0.125mV     |
@@ -188,7 +189,7 @@ void loop()
   enc1.tick();
   enc2.tick();
 
-  // считываем с АЦП ADS1115 
+  // считываем с АЦП ADS1115
   adc = ads.readADC_SingleEnded(0); // (0) - номер канала
   float u = float(adc) * 0.1875 / 1000.0;
 
@@ -388,7 +389,11 @@ void loop()
       StepDutyTime = 0;
       DutyTime = 0;
     }
+
+    pageCounter = 1;
+    SubSettings = 1;
   }
+
   if (digitalRead(34) and !btnflag)
   {
     btnflag = true;
@@ -396,31 +401,62 @@ void loop()
     MainMenuflag = true;
     SubMenuDraw = !SubMenuDraw;
     SubMenuflag = true;
+    set_flag = true;
   }
   if (!digitalRead(34) and btnflag)
   {
     btnflag = false;
   }
-  if (SubMenuDraw and SubMenuflag)
-  {
-    menu.drawSettings(pageCounter, 0x000F, 0xF00F, MenuPages);
-    SubMenuflag = false;
-  }
+  // if (SubMenuDraw and SubMenuflag)
+  // {
+  //   menu.drawSettings(pageCounter, 0x000F, 0xF00F, MenuPages);
+  //   SubMenuflag = false;
+  // }
   if ((SubMenuDraw) and (MenuLevel == 0))
   {
-    if (enc2.right())
+
+    if (enc1.right())
     {
       pageCounter++;
       pageCounter = (pageCounter > 8) ? 1 : pageCounter;
-      pageCounter = (pageCounter > 4 && pageCounter < 8) ? 8 : pageCounter; //убирает пустую прокрутку
+      //pageCounter = (pageCounter > 4 && pageCounter < 8) ? 8 : pageCounter; //убирает пустую прокрутку
       SubMenuflag = true;
     }
-    else if (enc2.left())
+    else if (enc1.left())
     {
       pageCounter--;
       pageCounter = (pageCounter < 1) ? 8 : pageCounter;
-      pageCounter = (pageCounter > 4 && pageCounter < 8) ? 4 : pageCounter; //убирает пустую прокрутку
+      //pageCounter = (pageCounter > 4 && pageCounter < 8) ? 4 : pageCounter; //убирает пустую прокрутку
       SubMenuflag = true;
+    }
+
+    // menu.drawSubMenu(0xF000, 0x000F);
+
+    if (btn_1.get())
+    {
+      SubSettings++;
+      SubSettings = (SubSettings == 3) ? 0 : SubSettings;
+      pageCounter = 1;
+      full_clear = !full_clear;
+    }
+
+    switch (SubSettings)
+    {
+    case 1:
+      if (SubMenuDraw and SubMenuflag)
+      {
+        menu.drawSettings(pageCounter, 0x000F, 0xF00F, MenuPages);
+        SubMenuflag = false;
+      }
+      menu.drawSubSettings(pageCounter, 0xF00F);
+      break;
+
+    case 2:
+      menu.drawdSubSettingsChoose(pageCounter, 0xF00F, last_state);
+      break;
+
+    default:
+      break;
     }
   }
 }
