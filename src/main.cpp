@@ -1,6 +1,9 @@
 #include <Arduino.h>
 #include <Menu.h>
 
+#include <Adafruit_ADS1X15.h>
+Adafruit_ADS1115 ads;
+
 #include <WiFi.h>
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
@@ -9,18 +12,19 @@
 #include <TimeLib.h>
 #include <Timer.h>
 
+#include <DDS.h>
+
 #include <EncButton.h>
 #include <string>
 #include <iostream>
-// #include <Adafruit_MCP23X17.h>
+#include <MCP4725.h>// Підключення бібліотеки для роботи з ЦАП MCP4725
+MCP4725 dac(0x60);// Створення об'єкту dac і задання йому адреси 0х60 для роботи з MCP4725
 #include <MQTT.h>
 
 #include <MCP23017_Buttons.h>
 #include <Preferences.h>
-
-#include <Wire.h>
-#include <Adafruit_ADS1X15.h>
-Adafruit_ADS1115 ads;
+DDS dds(13, 25, 27, 12);
+// #include <Wire.h>
 
 Preferences preferences;
 
@@ -75,6 +79,7 @@ float Oldfrequency;
 
 float PWM = 0;
 float OldPWM;
+int dacValue = 0;
 
 float frequencySteps[] = {0.1f, 1.0f, 10.0f, 100.0f, 1000.0f, 10000.0f, 100000.0f};
 int i = 3;
@@ -115,8 +120,7 @@ String MenuPages[8]{};
 // Menu menu;
 Timer clocks;
 // Keyboard keyb;
-
-int adc;
+float adc0;
 
 void setup()
 {
@@ -140,10 +144,6 @@ void setup()
   timeClient.begin();
   timeClient.setTimeOffset(10800);
   mcp.begin_I2C(0x20);
-  // mcp.begin_I2C();
-  // mcp.pinMode(1, INPUT);
-  // mcp.pinMode(2, INPUT);
-
   while (!timeClient.update())
   {
     timeClient.forceUpdate();
@@ -170,7 +170,6 @@ void setup()
   menu.DrawTime(hour(), minute(), second());
   preferences.end();
 
-
   // Модуль 16-битного АЦП ADS1115 
   // ВОЗМОЖНЫЕ ВАРИАНТЫ УСТАНОВКИ КУ:
   // ads.setGain(GAIN_TWOTHIRDS); | 2/3х | +/-6.144V | 1bit = 0.1875mV    |
@@ -187,10 +186,10 @@ void loop()
 {
   enc1.tick();
   enc2.tick();
-
+  dds.setFrequency(frequency);
   // считываем с АЦП ADS1115 
-  adc = ads.readADC_SingleEnded(0); // (0) - номер канала
-  float u = float(adc) * 0.1875 / 1000.0;
+  // adc0 = ads.readADC_SingleEnded(0); // (0) - номер канала
+  // float u = adc0 * 0.1875 / 1000.0;
 
   preferences.begin("memory", false);
   ArduinoOTA.handle();
@@ -232,7 +231,7 @@ void loop()
 
     if (OldPWM != PWM)
     {
-      menu.DrawPWM(PWM);
+      menu.DrawPWM(PWM/10);
       esp.MQTT_pub("PWM3", PWM);
       OldPWM = PWM;
     }
@@ -302,13 +301,13 @@ void loop()
     {
       frequency += frequencyStep;
     }
-    if (enc2.right() && PWM < 100)
+    if (enc2.right() && PWM < 1000)
     {
-      PWM += 1;
+      PWM += 10;
     }
     else if (enc2.left() && PWM > 0)
     {
-      PWM -= 1;
+      PWM -= 10;
     }
 
     if (btn_1.get())
@@ -412,15 +411,19 @@ void loop()
     {
       pageCounter++;
       pageCounter = (pageCounter > 8) ? 1 : pageCounter;
-      pageCounter = (pageCounter > 4 && pageCounter < 8) ? 8 : pageCounter; //убирает пустую прокрутку
+      // pageCounter = (pageCounter > 4 && pageCounter < 8) ? 8 : pageCounter; //убирает пустую прокрутку
       SubMenuflag = true;
     }
     else if (enc2.left())
     {
       pageCounter--;
       pageCounter = (pageCounter < 1) ? 8 : pageCounter;
-      pageCounter = (pageCounter > 4 && pageCounter < 8) ? 4 : pageCounter; //убирает пустую прокрутку
+      // pageCounter = (pageCounter > 4 && pageCounter < 8) ? 4 : pageCounter; //убирает пустую прокрутку
       SubMenuflag = true;
     }
   }
+  dacValue = map(PWM, 0, 1000, 1260, 30);
+  dacValue = constrain(dacValue, 30, 1260);
+  dac.setValue(dacValue);
+  
 }
