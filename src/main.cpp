@@ -12,29 +12,24 @@ Adafruit_ADS1115 ads;
 #include <TimeLib.h>
 #include <Timer.h>
 
-#include <DDS.h>
-
+#include <AD9850_2.h>
+AD9850 dds;
 #include <EncButton.h>
-#include <string>
-#include <iostream>
+// #include <string>
+// #include <iostream>
 #include <MCP4725.h>// Підключення бібліотеки для роботи з ЦАП MCP4725
 MCP4725 dac(0x60);// Створення об'єкту dac і задання йому адреси 0х60 для роботи з MCP4725
 #include <MQTT.h>
 
 #include <MCP23017_Buttons.h>
-#include <Preferences.h>
-DDS dds(13, 25, 27, 12);
-// #include <Wire.h>
 
+#include <Preferences.h>
 Preferences preferences;
 
 float frequency_memory = 0;
 float PWM_memory = 0;
 float frequency_modulation_memory = 0;
 float PWM_modulation_memory = 0;
-
-// Adafruit_MCP23X17 mcp;
-// #include <Keyboard.h>
 
 EncButton<EB_TICK, 32, 33> enc1;
 EncButton<EB_TICK, 14, 4> enc2;
@@ -122,8 +117,10 @@ Timer clocks;
 // Keyboard keyb;
 float adc0;
 
+
 void setup()
 {
+  dds.setup();
   Serial.begin(115200);
   Serial.println("1");
   MenuPages[0] = "Main Sett.";
@@ -139,7 +136,7 @@ void setup()
   WiFi.hostByName("ua.pool.ntp.org", NTP_IP);
   ArduinoOTA.setHostname("a[D]rian");
   ArduinoOTA.begin();
-
+  dds.setup();
   esp.MQTT_Setup();
   timeClient.begin();
   timeClient.setTimeOffset(10800);
@@ -186,7 +183,7 @@ void loop()
 {
   enc1.tick();
   enc2.tick();
-  dds.setFrequency(frequency);
+  dds.setfreq(frequency, 0);
   // считываем с АЦП ADS1115 
   // adc0 = ads.readADC_SingleEnded(0); // (0) - номер канала
   // float u = adc0 * 0.1875 / 1000.0;
@@ -425,5 +422,5 @@ void loop()
   dacValue = map(PWM, 0, 1000, 1260, 30);
   dacValue = constrain(dacValue, 30, 1260);
   dac.setValue(dacValue);
-  
+  dds.setfreq(frequency,0);
 }

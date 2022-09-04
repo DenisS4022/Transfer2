@@ -1,3 +1,0 @@
-DDS	KEYWORD1
-setFrequency	KEYWORD2
-trim  KEYWORD2
