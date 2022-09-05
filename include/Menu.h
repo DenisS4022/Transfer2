@@ -1,6 +1,13 @@
 #ifndef Menu_h
 #define Menu_h
 #include <TFT_eSPI.h>
+
+extern String MenuPages[];
+extern String MainSett[];
+extern String ModFreq[];
+extern String Memory[];
+extern String Resonance[];
+
 class Menu
 {
     public:
@@ -17,7 +24,9 @@ class Menu
         void DrawData(int day, int month, int year );
         void DrawDutyTime(float DutyTime, String TimeUnits);
         void DrawStepDutyTime(float StepDutyTime, String StepUnits);
-        void drawSettings(int pageCounter, int MenuColor, int SubTextColor, String Strings[8]);
+        int drawSettings(int pageCounter, int MenuColor, int SubTextColor, String Strings[8]);
+        void drawSubSettings(int pageCounter, int SubTextColor);
+        void drawdSubSettingsChoose(int pageCounter, int SubTextColor, int last_state);
         void menu(int TextColor, int MenuColor, String Strings[8]);
 };
 
