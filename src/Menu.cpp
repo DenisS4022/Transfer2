@@ -331,7 +331,7 @@ void Menu::drawSubSettings(int pageCounter, int SubTextColor)
 {
   if (full_clear)
   {
-    tft.fillRect(0, 0, 480, 320, 0x000F);
+    tft.fillRect(140, 0, 480, 320, 0x000F);
     full_clear = false;
   }
 
@@ -384,10 +384,10 @@ void Menu::drawSubSettings(int pageCounter, int SubTextColor)
 void Menu::drawdSubSettingsChoose(int pageCounter, int SubTextColor, int last_state)
 {
   static int prev_pageCounter;
-
+  set_flag = true;
   if (full_clear)
   {
-    tft.fillRect(0, 0, 480, 320, 0x000F);
+    tft.fillRect(140, 0, 480, 320, 0x000F);
     for (int i = 0; i < 8; i++)
     {
       tft.setCursor(0, 25 + i * 40);
@@ -453,7 +453,7 @@ void Menu::drawdSubSettingsChoose(int pageCounter, int SubTextColor, int last_st
 
 void Menu::menu(int TextColor, int MenuColor, String Strings[8])
 {
-  tft.fillRect(0, 0, 140, 320, MenuColor);
+  tft.fillRect(0, 0, 480, 320, MenuColor);
   tft.setTextColor(TextColor);
   tft.setCursor(0, 25);
   tft.print(Strings[0]);
@@ -473,4 +473,10 @@ void Menu::menu(int TextColor, int MenuColor, String Strings[8])
   tft.print(Strings[7]);
 }
 
+void Menu::printFrequencySubMenu(String frequency_str)
+{
+  tft.fillRect(140, 0, 440, 40, TFT_WHITE);
+  tft.setCursor(140, 25);
+  tft.println(frequency_str);
+}
 Menu menu = Menu();

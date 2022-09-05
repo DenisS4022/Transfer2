@@ -71,10 +71,12 @@ extern int last_state;
 extern bool full_clear;
 
 bool menuState = false;
+bool Selectedflag = false;
 
 int SubSettings = 1;
 int MenuLevel = 0;
 int pageCounter = 1;
+int SelectCounter = 1;
 
 float frequency = 0;
 float Oldfrequency;
@@ -202,7 +204,7 @@ void loop()
       menu.cleanDisplay();
       menu.DrawIP(IP);
       menu.DrawFrequency(frequency);
-      menu.DrawPWM(PWM);
+      menu.DrawPWM(PWM/10);
       menu.DrawFrequencyStep(frequencyStep);
       menu.DrawCurrent(Current);
       menu.DrawDutyTime(DutyTime, TimeUnits);
@@ -411,47 +413,115 @@ void loop()
   // }
   if ((SubMenuDraw) and (MenuLevel == 0))
   {
-
-    if (enc1.right())
-    {
-      pageCounter++;
-      pageCounter = (pageCounter > 8) ? 1 : pageCounter;
-      // pageCounter = (pageCounter > 4 && pageCounter < 8) ? 8 : pageCounter; //убирает пустую прокрутку
-      SubMenuflag = true;
-    }
-    else if (enc1.left())
-    {
-      pageCounter--;
-      pageCounter = (pageCounter < 1) ? 8 : pageCounter;
-      // pageCounter = (pageCounter > 4 && pageCounter < 8) ? 4 : pageCounter; //убирает пустую прокрутку
-      SubMenuflag = true;
-    }
-
-    // menu.drawSubMenu(0xF000, 0x000F);
-
     if (btn_1.get())
     {
       SubSettings++;
-      SubSettings = (SubSettings == 3) ? 0 : SubSettings;
-      pageCounter = 1;
+      SubSettings = (SubSettings == 4) ? 1 : SubSettings;
       full_clear = !full_clear;
+      SubMenuflag = true;
+    }
+
+    if (btn_0.get())
+    {
+      SubSettings--;
+      SubSettings = (SubSettings == -1) ? 1 : SubSettings;
+      SelectCounter = 1;
+      full_clear = !full_clear;
+      SubMenuflag = true;
     }
 
     switch (SubSettings)
     {
-    case 1:
+    case 1: 
+      if (enc1.right())
+      {
+        pageCounter++;
+        pageCounter = (pageCounter > 8) ? 1 : pageCounter;
+        // pageCounter = (pageCounter > 4 && pageCounter < 8) ? 8 : pageCounter; //убирает пустую прокрутку
+        SubMenuflag = true;
+        SelectCounter = 1;
+      }
+      else if (enc1.left())
+      {
+        pageCounter--;
+        pageCounter = (pageCounter < 1) ? 8 : pageCounter;
+        // pageCounter = (pageCounter > 4 && pageCounter < 8) ? 4 : pageCounter; //убирает пустую прокрутку
+        SubMenuflag = true;
+        SelectCounter = 1;
+      }
       if (SubMenuDraw and SubMenuflag)
       {
         menu.drawSettings(pageCounter, 0x000F, 0xF00F, MenuPages);
+        menu.drawSubSettings(pageCounter, 0xF00F);
         SubMenuflag = false;
       }
-      menu.drawSubSettings(pageCounter, 0xF00F);
       break;
 
     case 2:
-      menu.drawdSubSettingsChoose(pageCounter, 0xF00F, last_state);
+      if(SubMenuflag)
+        {
+          menu.drawSettings(0, 0x000F, 0xF00F, MenuPages);
+          SubMenuflag = false;
+          Selectedflag = true;
+        }
+      if(enc1.left())
+        {
+          SelectCounter++;
+          SelectCounter = (SelectCounter > 8) ? 1 : SelectCounter;
+          Selectedflag = true;
+        }
+      if(enc1.right())
+        {
+          SelectCounter--;
+          SelectCounter = (SelectCounter < 1) ? 8 : SelectCounter;
+          Selectedflag = true;
+        }
+      if (SubMenuDraw and Selectedflag)
+        {
+          menu.drawdSubSettingsChoose(SelectCounter, 0xF00F, pageCounter);
+          Selectedflag = false;
+        }
       break;
+    case 3:
+      switch (pageCounter)
+      {
+        case 1:
+          switch (SelectCounter)
+          {
+          case 1:
+            if(enc1.right())
+              {
+                frequency += frequencyStep;
+                MainSett[0] = "Freq: " + String(frequency);
+                menu.printFrequencySubMenu(MainSett[0]);
+              }
+              else if(enc1.left())
+                {
+                  if ((frequency - frequencyStep) > 0)
+                    {
+                      frequency -= frequencyStep;
+                    }
+                    else if ((frequency - frequencyStep) <= 0)
+                    {
+                      frequency = 0;
+                    }
+                  MainSett[0] = "Freq: " + String(frequency);
+                  menu.printFrequencySubMenu(MainSett[0]);
+                }
+            break;
+          
+          default:
+            break;
+          }
+            {
 
+            }
+          break;
+        
+        default:
+          break;
+      }
+      break;
     default:
       break;
     }
