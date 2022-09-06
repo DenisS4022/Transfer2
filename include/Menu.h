@@ -14,7 +14,7 @@ class Menu
         void start();
         void cleanDisplay();
         void DrawIP(String IP);
-        void DrawFrequency(float frequency);
+        void DrawFrequency(float frequency, String Unit);
         void DrawFrequencyStep(float frequencyStep);
         void DrawPWM(float PWM);
         void DrawBitmaps();
@@ -29,6 +29,7 @@ class Menu
         void drawdSubSettingsChoose(int pageCounter, int SubTextColor, int last_state);
         void menu(int TextColor, int MenuColor, String Strings[8]);
         void printFrequencySubMenu(String frequency_str);
+        void printFromMassive(int i);
 };
 
 extern Menu menu;

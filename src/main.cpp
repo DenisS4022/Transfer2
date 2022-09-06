@@ -82,12 +82,21 @@ float frequency = 0;
 float Oldfrequency;
 
 float PWM = 0;
+float PWM_steps[] = {1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
+int PWM_step_selector = 5;
+float PWM_step = PWM_steps[PWM_step_selector];
 float OldPWM;
 int dacValue = 0;
 
 float frequencySteps[] = {0.1f, 1.0f, 10.0f, 100.0f, 1000.0f, 10000.0f, 100000.0f};
-int i = 3;
+int i = 4;
 float frequencyStep = frequencySteps[i];
+String frequency_units[] = {"Hz", "kHz", "MHz",};
+String frequency_unit = "Hz";
+String frequency_step_unit = "Hz";
+String frequency_memory_unit = "Hz";
+float DisplayedFrequency = 0;
+float DisplayedFrequencyStep = 0;
 float OldFrequencyStep;
 
 float Current = 1.0;
@@ -95,6 +104,7 @@ float OldCurrent;
 
 float MemoryFrequency = 0;
 float OldMemoryFrequency;
+float MemoryPWM = 0;
 
 float DutyTime = 0;
 float PrintedDutyTime = 0;
@@ -141,7 +151,6 @@ void setup()
   ArduinoOTA.setHostname("a[D]rian");
   ArduinoOTA.begin();
   dds.setup();
-  esp.MQTT_Setup();
   timeClient.begin();
   timeClient.setTimeOffset(10800);
   mcp.begin_I2C(0x20);
@@ -156,10 +165,11 @@ void setup()
   clocks.setRealTime(Time, Data);
 
   MemoryFrequency = preferences.getFloat("freq_memory", 0);
+  PWM_memory = preferences.getFloat("PWM_memory", 33);
   menu.start();
   menu.cleanDisplay();
   menu.DrawIP(IP);
-  menu.DrawFrequency(frequency);
+  menu.DrawFrequency(DisplayedFrequency, frequency_unit);
   menu.DrawPWM(PWM);
   menu.DrawFrequencyStep(frequencyStep);
   menu.DrawCurrent(Current);
@@ -170,6 +180,7 @@ void setup()
   menu.DrawData(day(), month(), year());
   menu.DrawTime(hour(), minute(), second());
   preferences.end();
+  esp.MQTT_Setup();
 
   // Модуль 16-битного АЦП ADS1115 
   // ВОЗМОЖНЫЕ ВАРИАНТЫ УСТАНОВКИ КУ:
@@ -187,23 +198,45 @@ void loop()
 {
   enc1.tick();
   enc2.tick();
+
+  ArduinoOTA.handle();
+
+  MainSett[0] = "Freq: " + String(DisplayedFrequency) + frequency_unit;
+  MainSett[1] = "STEP: " + String(frequencyStep) + "Hz";
+  MainSett[2] = "PWM: " + String(PWM/10) + "%";
+  MainSett[3] = "PWM STEP: " + String(PWM_step/10) + "%";
+  Memory[0] = "Freq. memory: " + String(MemoryFrequency) + "Hz";
+  Memory[1] = "Memory PWM: " + String(MemoryPWM) + "%";
   dds.setfreq(frequency, 0);
   // считываем с АЦП ADS1115 
   // adc0 = ads.readADC_SingleEnded(0); // (0) - номер канала
   // float u = adc0 * 0.1875 / 1000.0;
-
-  preferences.begin("memory", false);
-  ArduinoOTA.handle();
+  if(frequency <= 999)
+  {
+    DisplayedFrequency = frequency;
+    frequency_unit = frequency_units[0];
+  }
+  if(frequency > 999)
+    {
+      DisplayedFrequency = frequency * 0.001;
+      frequency_unit = frequency_units[1];
+    }
+  if(frequency > 999999)
+  {
+    DisplayedFrequency = frequency * 0.000001;
+    frequency_unit = frequency_units[2];
+  }
 
   String RealTime = String(hour()) + ":" + String(minute()) + ":" + String(second());
   String RealData = String(day()) + "-" + String(month()) + "-" + String(year());
   if (MainMenuDraw)
   {
+    preferences.begin("memory", false);
     if (MainMenuflag)
     {
       menu.cleanDisplay();
       menu.DrawIP(IP);
-      menu.DrawFrequency(frequency);
+      menu.DrawFrequency(DisplayedFrequency, frequency_unit);
       menu.DrawPWM(PWM/10);
       menu.DrawFrequencyStep(frequencyStep);
       menu.DrawCurrent(Current);
@@ -225,8 +258,8 @@ void loop()
 
     if (Oldfrequency != frequency)
     {
-      menu.DrawFrequency(frequency);
-      esp.MQTT_pub("freq", frequency);
+      menu.DrawFrequency(DisplayedFrequency, frequency_unit);
+      esp.MQTT_pub("freq2", frequency);
       Oldfrequency = frequency;
     }
 
@@ -264,7 +297,7 @@ void loop()
 
     if (OldMemoryFrequency != MemoryFrequency)
     {
-      menu.DrawButton(250, 280, 210, 30, 3, 0xFF20, (String)MemoryFrequency);
+      menu.DrawButton(250, 280, 210, 30, 3, 0xFF20, ((String)MemoryFrequency + "Hz"));
       OldMemoryFrequency = MemoryFrequency;
     }
 
@@ -289,11 +322,11 @@ void loop()
 
     if (enc1.left())
     {
-      if ((frequency - frequencyStep) > 0)
+      if ((frequency - frequencyStep) >= 0)
       {
         frequency -= frequencyStep;
       }
-      else if ((frequency - frequencyStep) <= 0)
+      else if ((frequency - frequencyStep) < 0)
       {
         frequency = 0;
       }
@@ -302,13 +335,27 @@ void loop()
     {
       frequency += frequencyStep;
     }
-    if (enc2.right() && PWM < 1000)
+    if (enc2.right())
     {
-      PWM += 10;
+      if((PWM + PWM_step) <= 1000)
+      {
+        PWM += PWM_step;
+      }
+      else if((PWM + PWM_step) > 1000)
+      {
+        PWM = 1000;
+      }
     }
-    else if (enc2.left() && PWM > 0)
+    if(enc2.left())
     {
-      PWM -= 10;
+      if(PWM - PWM_step > 0)
+      {
+        PWM -= PWM_step;
+      }
+      else if(PWM - PWM_step <= 0)
+      {
+        PWM = 0;
+      }
     }
 
     if (btn_1.get())
@@ -334,6 +381,7 @@ void loop()
       preferences.putFloat("freq_memory", frequency);
       MemoryFrequency = frequency;
       preferences.putFloat("PWM_memory", PWM);
+      MemoryPWM = PWM;
     }
     if (btn_13.get())
     {
@@ -425,7 +473,7 @@ void loop()
     {
       SubSettings--;
       SubSettings = (SubSettings == -1) ? 1 : SubSettings;
-      SelectCounter = 1;
+      // SelectCounter = 1;
       full_clear = !full_clear;
       SubMenuflag = true;
     }
@@ -492,8 +540,8 @@ void loop()
             if(enc1.right())
               {
                 frequency += frequencyStep;
-                MainSett[0] = "Freq: " + String(frequency);
-                menu.printFrequencySubMenu(MainSett[0]);
+                MainSett[0] = "Freq: " + String(frequency) + "Hz";
+                menu.printFromMassive(0);
               }
               else if(enc1.left())
                 {
@@ -505,19 +553,106 @@ void loop()
                     {
                       frequency = 0;
                     }
-                  MainSett[0] = "Freq: " + String(frequency);
-                  menu.printFrequencySubMenu(MainSett[0]);
+                  MainSett[0] = "Freq: " + String(frequency) + "Hz";
+                  menu.printFromMassive(0);
+                }
+          case 2:
+            if(enc1.right())
+              {
+                if (i <= (sizeof(frequencySteps) / sizeof(frequencySteps[0])) - 2)
+                {
+                  i++;
+                }
+                frequencyStep = frequencySteps[i];
+                MainSett[1] ="STEP: " + String(frequencySteps[i]) + "Hz";
+                menu.printFromMassive(1);
+              }
+              else if(enc1.left())
+                {
+                  if (i > 0)
+                  {
+                    i--;
+                  }
+                  frequencyStep = frequencySteps[i];
+                  MainSett[1] ="STEP: " + String(frequencySteps[i]) + "Hz";
+                  menu.printFromMassive(1);
                 }
             break;
-          
+          case 3:
+            if(enc1.right())
+            {
+              if((PWM + PWM_step) <= 1000)
+                {
+                  PWM += PWM_step;
+                }
+              else if((PWM + PWM_step) > 1000)
+                {
+                  PWM = 1000;
+                }
+              MainSett[2] = "PWM: "  + String(PWM/10) + "%";
+              menu.printFromMassive(2);
+            }
+            if(enc1.left())
+            {
+              if(PWM - PWM_step > 0)
+                {
+                  PWM -= PWM_step;
+                }
+                else if(PWM - PWM_step <= 0)
+                {
+                  PWM = 0;
+                }
+              MainSett[2] = "PWM: "  + String(PWM/10) + "%";
+              menu.printFromMassive(2);
+            }
+            break;
+          case 4:
+            if(enc1.right())
+            {
+              if(PWM_step_selector < ((sizeof(PWM_steps)/sizeof(PWM_steps[0])) - 1))
+              { 
+                PWM_step_selector++;
+                PWM_step = PWM_steps[PWM_step_selector];
+                MainSett[3] = "PWM STEP: " + String(PWM_step/10) + "%";
+                menu.printFromMassive(3);
+              }
+            }
+            else if(enc1.left())
+            {
+              if(PWM_step_selector > 0)
+              {
+                PWM_step_selector--;
+                PWM_step = PWM_steps[PWM_step_selector];
+                MainSett[3] = "PWM STEP: " + String(PWM_step/10) + "%";
+                menu.printFromMassive(3);
+              }
+            }
+            break;
           default:
             break;
           }
-            {
-
-            }
           break;
-        
+        case 2:
+          break;
+
+        case 3:
+          break;
+
+        case 4:
+          break;
+
+        case 5:
+          break;
+
+        case 6:
+          break;
+
+        case 7:
+          break;
+
+        case 8:
+          break;
+
         default:
           break;
       }

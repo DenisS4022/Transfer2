@@ -11,10 +11,10 @@ String MenuPages[] = {"Main Sett.",
                       " ",
                       "Settings"};
 
-String MainSett[] = {"Freq",
-                     "Step",
-                     "PWM",
-                     "2.00",
+String MainSett[] = {"Freq: 0.00",
+                     "STEP: 1000.00",
+                     "PWM: 0%",
+                     "PWM STEP: 5%",
                      "Current Factor"};
 
 String ModFreq[] = {"M.Step",
@@ -23,8 +23,8 @@ String ModFreq[] = {"M.Step",
                     "MOD DUTY"};
 
 String Memory[] = {"Memory freq",
-                   "Memory mod. freq",
                    "Memory PWM",
+                   "Memory mod. freq",
                    "Memory mod. PWM"};
 
 String Resonance[] = {"Freq. step",
@@ -69,15 +69,15 @@ void Menu::DrawIP(String IP)
   tft.print("L13");
 }
 
-void Menu::DrawFrequency(float frequency)
+void Menu::DrawFrequency(float frequency, String Unit)
 {
   tft.fillRect(180, 100, 180, 25, 0x0000);
   tft.setCursor(30, 120);
   tft.setTextSize(1);
   tft.setTextColor(0x0778);
   tft.print("FREQUENCY:");
-  tft.print(frequency);
-  tft.print(" Hz");
+  tft.print(String(frequency) + " ");
+  tft.print(Unit);
   draw_line1 = map((int)frequency, 0, 1000000, 0, 420);
   draw_line1 = constrain(draw_line1, 0, 420);
   tft.fillRect(30, 128, draw_line1, 18, 0x0FF0);
@@ -478,5 +478,11 @@ void Menu::printFrequencySubMenu(String frequency_str)
   tft.fillRect(140, 0, 440, 40, TFT_WHITE);
   tft.setCursor(140, 25);
   tft.println(frequency_str);
+}
+void Menu::printFromMassive(int i)
+{
+  tft.fillRect(140, (i * 40), 440, 40, TFT_WHITE);
+  tft.setCursor(140, 25 + i * 40);
+  tft.println(MainSett[i]);
 }
 Menu menu = Menu();
