@@ -71,8 +71,6 @@ extern bool set_flag;
 extern int last_state;
 extern bool full_clear;
 
-bool menuState = false;
-
 int SubSettings = 1;
 int MenuLevel = 0;
 int pageCounter = 1;
@@ -414,28 +412,10 @@ void loop()
   // }
   if ((SubMenuDraw) and (MenuLevel == 0))
   {
-
-    if (enc1.right())
-    {
-      pageCounter++;
-      pageCounter = (pageCounter > 8) ? 1 : pageCounter;
-      //pageCounter = (pageCounter > 4 && pageCounter < 8) ? 8 : pageCounter; //убирает пустую прокрутку
-      SubMenuflag = true;
-    }
-    else if (enc1.left())
-    {
-      pageCounter--;
-      pageCounter = (pageCounter < 1) ? 8 : pageCounter;
-      //pageCounter = (pageCounter > 4 && pageCounter < 8) ? 4 : pageCounter; //убирает пустую прокрутку
-      SubMenuflag = true;
-    }
-
-    // menu.drawSubMenu(0xF000, 0x000F);
-
     if (btn_1.get())
     {
       SubSettings++;
-      SubSettings = (SubSettings == 3) ? 0 : SubSettings;
+      SubSettings = (SubSettings == 4) ? 0 : SubSettings;
       pageCounter = 1;
       full_clear = !full_clear;
     }
@@ -443,6 +423,22 @@ void loop()
     switch (SubSettings)
     {
     case 1:
+
+      if (enc1.right())
+      {
+        pageCounter++;
+        pageCounter = (pageCounter > 8) ? 1 : pageCounter;
+        pageCounter = (pageCounter > 4 && pageCounter < 8) ? 8 : pageCounter; //убирает пустую прокрутку
+        SubMenuflag = true;
+      }
+      else if (enc1.left())
+      {
+        pageCounter--;
+        pageCounter = (pageCounter < 1) ? 8 : pageCounter;
+        pageCounter = (pageCounter > 4 && pageCounter < 8) ? 4 : pageCounter; //убирает пустую прокрутку
+        SubMenuflag = true;
+      }
+
       if (SubMenuDraw and SubMenuflag)
       {
         menu.drawSettings(pageCounter, 0x000F, 0xF00F, MenuPages);
@@ -452,7 +448,25 @@ void loop()
       break;
 
     case 2:
+      if (enc1.right())
+      {
+        pageCounter++;
+        pageCounter = (pageCounter > 8) ? 1 : pageCounter;
+        pageCounter = (pageCounter < 4) ? pageCounter : 1;
+        SubMenuflag = true;
+      }
+      else if (enc1.left())
+      {
+        pageCounter--;
+        pageCounter = (pageCounter < 1) ? 8 : pageCounter;
+        pageCounter = (pageCounter > 4 && pageCounter < 8) ? 4 : pageCounter; //убирает пустую прокрутку
+        SubMenuflag = true;
+      }
       menu.drawdSubSettingsChoose(pageCounter, 0xF00F, last_state);
+      break;
+
+    case 3:
+      menu.drawSubSettingsValue(pageCounter);
       break;
 
     default:

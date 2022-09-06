@@ -27,6 +27,7 @@ class Menu
         int drawSettings(int pageCounter, int MenuColor, int SubTextColor, String Strings[8]);
         void drawSubSettings(int pageCounter, int SubTextColor);
         void drawdSubSettingsChoose(int pageCounter, int SubTextColor, int last_state);
+        void drawSubSettingsValue(int pageCounter);
         void menu(int TextColor, int MenuColor, String Strings[8]);
 };
 

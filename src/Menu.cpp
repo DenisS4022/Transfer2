@@ -451,6 +451,14 @@ void Menu::drawdSubSettingsChoose(int pageCounter, int SubTextColor, int last_st
     prev_pageCounter = pageCounter;
 }
 
+void Menu::drawSubSettingsValue(int pageCounter)
+{
+ 
+    tft.fillRect(200, ((pageCounter - 1) * 40), 440, 40, 0xFF00);
+    set_flag = false;
+  
+}
+
 void Menu::menu(int TextColor, int MenuColor, String Strings[8])
 {
   tft.fillRect(0, 0, 140, 320, MenuColor);
