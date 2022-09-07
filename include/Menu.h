@@ -7,14 +7,15 @@ extern String MainSett[];
 extern String ModFreq[];
 extern String Memory[];
 extern String Resonance[];
-
+extern String Settings[];
+extern int SelectColor;
 class Menu
 {
     public:
         void start();
         void cleanDisplay();
         void DrawIP(String IP);
-        void DrawFrequency(float frequency, String Unit);
+        void DrawFrequency(float DispFreq, float frequency, String Unit);
         void DrawFrequencyStep(float frequencyStep);
         void DrawPWM(float PWM);
         void DrawBitmaps();
@@ -30,6 +31,7 @@ class Menu
         void menu(int TextColor, int MenuColor, String Strings[8]);
         void printFrequencySubMenu(String frequency_str);
         void printFromMassive(int i);
+        void printFromSettings(int Changed);
 };
 
 extern Menu menu;

@@ -95,7 +95,7 @@ String frequency_units[] = {"Hz", "kHz", "MHz",};
 String frequency_unit = "Hz";
 String frequency_step_unit = "Hz";
 String frequency_memory_unit = "Hz";
-float DisplayedFrequency = 0;
+float DisplayedFrequency = 0.0f;
 float DisplayedFrequencyStep = 0;
 float OldFrequencyStep;
 
@@ -104,6 +104,7 @@ float OldCurrent;
 
 float MemoryFrequency = 0;
 float OldMemoryFrequency;
+float DisplayedMemoryFrequency = 0;
 float MemoryPWM = 0;
 
 float DutyTime = 0;
@@ -166,16 +167,31 @@ void setup()
 
   MemoryFrequency = preferences.getFloat("freq_memory", 0);
   PWM_memory = preferences.getFloat("PWM_memory", 33);
+  if(MemoryFrequency <= 999)
+  {
+    DisplayedMemoryFrequency = MemoryFrequency;
+    frequency_memory_unit =  frequency_units[0];
+  }
+  if(MemoryFrequency > 999)
+  {
+    DisplayedMemoryFrequency = MemoryFrequency * 0.001;
+    frequency_memory_unit =  frequency_units[1];
+  }
+  if(MemoryFrequency > 999999)
+  {
+    DisplayedMemoryFrequency = MemoryFrequency * 0.000001;
+    frequency_memory_unit =  frequency_units[2];
+  }
   menu.start();
   menu.cleanDisplay();
   menu.DrawIP(IP);
-  menu.DrawFrequency(DisplayedFrequency, frequency_unit);
+  menu.DrawFrequency(DisplayedFrequency, frequency, frequency_unit);
   menu.DrawPWM(PWM);
   menu.DrawFrequencyStep(frequencyStep);
   menu.DrawCurrent(Current);
   menu.DrawDutyTime(DutyTime, TimeUnits);
   menu.DrawStepDutyTime(StepDutyTime, StepUnits);
-  menu.DrawButton(250, 280, 210, 30, 3, 0xFF20, (String)MemoryFrequency);
+  menu.DrawButton(250, 280, 210, 30, 3, 0xFF20, (((String)DisplayedMemoryFrequency) + " " + frequency_memory_unit));
   menu.DrawButton(30, 280, 210, 30, 3, 0xFF20, MQTT);
   menu.DrawData(day(), month(), year());
   menu.DrawTime(hour(), minute(), second());
@@ -190,22 +206,23 @@ void setup()
   // ads.setGain(GAIN_FOUR);      | 4х   | +/-1.024V | 1bit = 0.03125mV   |
   // ads.setGain(GAIN_EIGHT);     | 8х   | +/-0.512V | 1bit = 0.015625mV  |
   // ads.setGain(GAIN_SIXTEEN);   | 16х  | +/-0.256V | 1bit = 0.0078125mV |
-  ads.setGain(GAIN_TWOTHIRDS);
   ads.begin();
+  ads.setGain(GAIN_TWOTHIRDS);
+  
 }
 
 void loop()
 {
   enc1.tick();
   enc2.tick();
-
+  esp.connect(esp.status());
   ArduinoOTA.handle();
 
-  MainSett[0] = "Freq: " + String(DisplayedFrequency) + frequency_unit;
+  MainSett[0] = "Freq: " + String(DisplayedFrequency, 4) + " " + frequency_unit;
   MainSett[1] = "STEP: " + String(frequencyStep) + "Hz";
   MainSett[2] = "PWM: " + String(PWM/10) + "%";
   MainSett[3] = "PWM STEP: " + String(PWM_step/10) + "%";
-  Memory[0] = "Freq. memory: " + String(MemoryFrequency) + "Hz";
+  Settings[0] = "Main menu style: " + String(SelectColor);
   Memory[1] = "Memory PWM: " + String(MemoryPWM) + "%";
   dds.setfreq(frequency, 0);
   // считываем с АЦП ADS1115 
@@ -227,6 +244,22 @@ void loop()
     frequency_unit = frequency_units[2];
   }
 
+  if(MemoryFrequency <= 999)
+  {
+    DisplayedMemoryFrequency = MemoryFrequency;
+    frequency_memory_unit =  frequency_units[0];
+  }
+  if(MemoryFrequency > 999)
+  {
+    DisplayedMemoryFrequency = MemoryFrequency * 0.001;
+    frequency_memory_unit =  frequency_units[1];
+  }
+  if(MemoryFrequency > 999999)
+  {
+    DisplayedMemoryFrequency = MemoryFrequency * 0.000001;
+    frequency_memory_unit =  frequency_units[2];
+  }
+  Memory[0] = "Freq. memory: " + String(DisplayedMemoryFrequency) + " " + frequency_memory_unit;
   String RealTime = String(hour()) + ":" + String(minute()) + ":" + String(second());
   String RealData = String(day()) + "-" + String(month()) + "-" + String(year());
   if (MainMenuDraw)
@@ -236,13 +269,13 @@ void loop()
     {
       menu.cleanDisplay();
       menu.DrawIP(IP);
-      menu.DrawFrequency(DisplayedFrequency, frequency_unit);
+      menu.DrawFrequency(DisplayedFrequency, frequency, frequency_unit);
       menu.DrawPWM(PWM/10);
       menu.DrawFrequencyStep(frequencyStep);
       menu.DrawCurrent(Current);
       menu.DrawDutyTime(DutyTime, TimeUnits);
       menu.DrawStepDutyTime(StepDutyTime, StepUnits);
-      menu.DrawButton(250, 280, 210, 30, 3, 0xFF20, (String)MemoryFrequency);
+      menu.DrawButton(250, 280, 210, 30, 3, 0xFF20, (((String)DisplayedMemoryFrequency) + " " + frequency_memory_unit));
       menu.DrawButton(30, 280, 210, 30, 3, 0xFF20, MQTT);
       menu.DrawData(day(), month(), year());
       menu.DrawTime(hour(), minute(), second());
@@ -258,7 +291,7 @@ void loop()
 
     if (Oldfrequency != frequency)
     {
-      menu.DrawFrequency(DisplayedFrequency, frequency_unit);
+      menu.DrawFrequency(DisplayedFrequency, frequency, frequency_unit);
       esp.MQTT_pub("freq2", frequency);
       Oldfrequency = frequency;
     }
@@ -297,7 +330,7 @@ void loop()
 
     if (OldMemoryFrequency != MemoryFrequency)
     {
-      menu.DrawButton(250, 280, 210, 30, 3, 0xFF20, ((String)MemoryFrequency + "Hz"));
+      menu.DrawButton(250, 280, 210, 30, 3, 0xFF20, (((String)DisplayedMemoryFrequency) + " " + frequency_memory_unit));
       OldMemoryFrequency = MemoryFrequency;
     }
 
@@ -540,7 +573,22 @@ void loop()
             if(enc1.right())
               {
                 frequency += frequencyStep;
-                MainSett[0] = "Freq: " + String(frequency) + "Hz";
+                  if(frequency <= 999)
+                    {
+                      DisplayedFrequency = frequency;
+                      frequency_unit = frequency_units[0];
+                    }
+                  if(frequency > 999)
+                      {
+                        DisplayedFrequency = frequency * 0.001;
+                        frequency_unit = frequency_units[1];
+                      }
+                  if(frequency > 999999)
+                    {
+                      DisplayedFrequency = frequency * 0.000001;
+                      frequency_unit = frequency_units[2];
+                    }
+                MainSett[0] = "Freq: " + String(DisplayedFrequency, 4) + frequency_unit;
                 menu.printFromMassive(0);
               }
               else if(enc1.left())
@@ -553,7 +601,22 @@ void loop()
                     {
                       frequency = 0;
                     }
-                  MainSett[0] = "Freq: " + String(frequency) + "Hz";
+                    if(frequency <= 999)
+                      {
+                        DisplayedFrequency = frequency;
+                        frequency_unit = frequency_units[0];
+                      }
+                    if(frequency > 999)
+                      {
+                        DisplayedFrequency = frequency * 0.001;
+                        frequency_unit = frequency_units[1];
+                      }
+                    if(frequency > 999999)
+                      {
+                        DisplayedFrequency = frequency * 0.000001;
+                        frequency_unit = frequency_units[2];
+                      }
+                  MainSett[0] = "Freq: " + String(DisplayedFrequency, 4) + frequency_unit;
                   menu.printFromMassive(0);
                 }
           case 2:
@@ -651,6 +714,37 @@ void loop()
           break;
 
         case 8:
+        switch(SelectCounter)
+        {
+          case 1:
+            if(enc1.right())
+            {
+              if((SelectColor + 1) <= 3)
+              {
+                SelectColor++;
+              }
+              else if((SelectColor + 1) > 3)
+              {
+                SelectColor = 0;
+              }
+              Settings[0] = "Main menu style: " + String(SelectColor);
+              menu.printFromSettings(0);
+            }
+            if(enc1.left())
+            {
+              if((SelectColor - 1) >= 0)
+              {
+                SelectColor--;
+              }
+              else if((SelectColor - 1) < 0)
+              {
+                SelectColor = 3;
+              }
+              Settings[0] = "Main menu style: " + String(SelectColor);
+              menu.printFromSettings(0);
+            }
+            break;
+        }
           break;
 
         default:
