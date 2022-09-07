@@ -81,6 +81,18 @@ int SelectCounter = 1;
 float frequency = 0;
 float Oldfrequency;
 
+float ModulationFrequency;
+float DisplayedModulationFrequency;
+String ModulationFrequencyUnit;
+
+
+float ModulationDuty;
+
+float ModulationFrequencySteps[] = {0.1f, 1.0f, 10.0f, 100.0f, 1000.0f, 10000.0f, 100000.0f};
+float ModulationFrequencyStep = ModulationFrequencySteps[4];
+int ModulationFrequencyStep
+float ModulationDutySteps[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+float ModulationDutyStep = ModulationDutySteps[5];
 float PWM = 0;
 float PWM_steps[] = {1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
 int PWM_step_selector = 5;
@@ -119,6 +131,7 @@ String StepUnits;
 
 float period = 0;
 
+
 String IP;
 String OldIP;
 
@@ -140,25 +153,33 @@ float adc0;
 void setup()
 {
   dds.setup();
+
   Serial.begin(115200);
   Serial.println("1");
 
   pinMode(34, INPUT);
 
   preferences.begin("memory", false);
+
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
   WiFi.hostByName("ua.pool.ntp.org", NTP_IP);
+
   ArduinoOTA.setHostname("a[D]rian");
   ArduinoOTA.begin();
+
   dds.setup();
+
   timeClient.begin();
-  timeClient.setTimeOffset(10800);
+  timeClient.setTimeOffset(10800)
+  ;
   mcp.begin_I2C(0x20);
+
   while (!timeClient.update())
   {
     timeClient.forceUpdate();
   }
+
   formattedDate = timeClient.getFormattedDate();
   int splitT = formattedDate.indexOf("T");
   Data = formattedDate.substring(0, splitT);
@@ -167,6 +188,7 @@ void setup()
 
   MemoryFrequency = preferences.getFloat("freq_memory", 0);
   PWM_memory = preferences.getFloat("PWM_memory", 33);
+
   if(MemoryFrequency <= 999)
   {
     DisplayedMemoryFrequency = MemoryFrequency;
@@ -224,6 +246,7 @@ void loop()
   MainSett[3] = "PWM STEP: " + String(PWM_step/10) + "%";
   Settings[0] = "Main menu style: " + String(SelectColor);
   Memory[1] = "Memory PWM: " + String(MemoryPWM) + "%";
+  ModFreq[0] = "M.Freq: " + String(DisplayedModulationFrequency, 4) + ModulationFrequencyUnit;
   dds.setfreq(frequency, 0);
   // считываем с АЦП ADS1115 
   // adc0 = ads.readADC_SingleEnded(0); // (0) - номер канала
@@ -505,7 +528,7 @@ void loop()
     if (btn_0.get())
     {
       SubSettings--;
-      SubSettings = (SubSettings == -1) ? 1 : SubSettings;
+      SubSettings = (SubSettings == 0) ? 1 : SubSettings;
       // SelectCounter = 1;
       full_clear = !full_clear;
       SubMenuflag = true;
@@ -696,6 +719,72 @@ void loop()
           }
           break;
         case 2:
+        switch (SelectCounter)
+        {
+        case 1:
+          if(enc1.right())
+          {
+            ModulationFrequency += ModulationFrequencyStep;
+            if(ModulationFrequency <= 999)
+              {
+                DisplayedModulationFrequency = ModulationFrequency;
+                ModulationFrequencyUnit = frequency_units[0];
+              }
+            if(ModulationFrequency > 999)
+              {
+                DisplayedModulationFrequency = ModulationFrequency * 0.001;
+                ModulationFrequencyUnit = frequency_units[1];
+              }
+            if(ModulationFrequency > 999999)
+              {
+                DisplayedModulationFrequency = ModulationFrequency * 0.000001;
+                ModulationFrequencyUnit = frequency_units[2];
+              }
+            ModFreq[0] = "M.Freq: " + String(DisplayedModulationFrequency, 4) + " " + ModulationFrequencyUnit;
+            menu.printFromModulation(0);
+          }
+          if(enc1.left())
+          {
+            if((ModulationFrequency - ModulationFrequencyStep) >= 0)
+            {
+              ModulationFrequency -= ModulationFrequencyStep;
+            }
+            if((ModulationFrequency - ModulationFrequencyStep) < 0)
+            {
+              ModulationFrequency = 0;
+            }
+            if(ModulationFrequency <= 999)
+              {
+                DisplayedModulationFrequency = ModulationFrequency;
+                ModulationFrequencyUnit = frequency_units[0];
+              }
+            if(ModulationFrequency > 999)
+              {
+                 DisplayedModulationFrequency = ModulationFrequency * 0.001;
+                ModulationFrequencyUnit = frequency_units[1];
+              }
+            if(ModulationFrequency > 999999)
+              {
+                DisplayedModulationFrequency = ModulationFrequency * 0.000001;
+                ModulationFrequencyUnit = frequency_units[2];
+              }
+            ModFreq[0] = "M.Freq: " + String(DisplayedModulationFrequency, 4) + " " + ModulationFrequencyUnit;
+            menu.printFromModulation(0);
+          }
+          break;
+        case 2:
+          if()
+          {
+
+          }
+          if()
+          {
+
+          }
+          break;
+        default:
+          break;
+        }
           break;
 
         case 3:

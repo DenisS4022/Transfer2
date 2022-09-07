@@ -32,6 +32,7 @@ class Menu
         void printFrequencySubMenu(String frequency_str);
         void printFromMassive(int i);
         void printFromSettings(int Changed);
+        void printFromModulation(int printed);
 };
 
 extern Menu menu;

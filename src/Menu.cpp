@@ -17,8 +17,8 @@ String MainSett[] = {"Freq: 0.0000 ",
                      "PWM STEP: 5%",
                      "Current Factor"};
 
-String ModFreq[] = {"M.Step",
-                    "M.Freq",
+String ModFreq[] = {"M.Freq",
+                    "M.Step",
                     "MOD DUTY STEP",
                     "MOD DUTY"};
 
@@ -505,5 +505,11 @@ void Menu::printFromSettings(int Changed)
   tft.fillRect(140, (Changed * 40), 440, 40, TFT_WHITE);
   tft.setCursor(140, 25 + Changed * 40);
   tft.println(Settings[Changed]);
+}
+void Menu::printFromModulation(int printed)
+{
+  tft.fillRect(140, (printed * 40), 440, 40, TFT_WHITE);
+  tft.setCursor(140, 25 + printed * 40);
+  tft.println(ModFreq[printed]);
 }
 Menu menu = Menu();
