@@ -16,7 +16,7 @@ class Menu
         void cleanDisplay();
         void DrawIP(String IP);
         void DrawFrequency(float DispFreq, float frequency, String Unit);
-        void DrawFrequencyStep(float frequencyStep);
+        void DrawFrequencyStep(float frequencyStep, String Unit);
         void DrawPWM(float PWM);
         void DrawBitmaps();
         void DrawCurrent(float Current);

@@ -82,17 +82,20 @@ float frequency = 0;
 float Oldfrequency;
 
 float ModulationFrequency;
-float DisplayedModulationFrequency;
-String ModulationFrequencyUnit;
-
-
+float OldModulationFrequency;
 float ModulationDuty;
+float OldModulationDuty;
+bool Modflag = false;
 
 float ModulationFrequencySteps[] = {0.1f, 1.0f, 10.0f, 100.0f, 1000.0f, 10000.0f, 100000.0f};
-float ModulationFrequencyStep = ModulationFrequencySteps[4];
-int ModulationFrequencyStep
+int ModulationFrequencyStepSelector = 4;
+float ModulationFrequencyStep = ModulationFrequencySteps[ModulationFrequencyStepSelector];
+String ModulationFrequencyStepUnit;
+int ModulationDutyStepSelector = 4;
 float ModulationDutySteps[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-float ModulationDutyStep = ModulationDutySteps[5];
+float ModulationDutyStep = ModulationDutySteps[ModulationDutyStepSelector];
+float DisplayedModulationFrequency;
+float DisplayedModulationFrequencyStep = 0;
 float PWM = 0;
 float PWM_steps[] = {1, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
 int PWM_step_selector = 5;
@@ -110,6 +113,8 @@ String frequency_memory_unit = "Hz";
 float DisplayedFrequency = 0.0f;
 float DisplayedFrequencyStep = 0;
 float OldFrequencyStep;
+
+String ModulationFrequencyUnit = frequency_units[0];
 
 float Current = 1.0;
 float OldCurrent;
@@ -158,6 +163,9 @@ void setup()
   Serial.println("1");
 
   pinMode(34, INPUT);
+
+  ledcAttachPin(12, 11); // Подключаем пин и канал ШИМа
+  ledcSetup(11, 0, 8);
 
   preferences.begin("memory", false);
 
@@ -209,7 +217,7 @@ void setup()
   menu.DrawIP(IP);
   menu.DrawFrequency(DisplayedFrequency, frequency, frequency_unit);
   menu.DrawPWM(PWM);
-  menu.DrawFrequencyStep(frequencyStep);
+  menu.DrawFrequencyStep(DisplayedFrequencyStep, frequency_step_unit);
   menu.DrawCurrent(Current);
   menu.DrawDutyTime(DutyTime, TimeUnits);
   menu.DrawStepDutyTime(StepDutyTime, StepUnits);
@@ -230,7 +238,7 @@ void setup()
   // ads.setGain(GAIN_SIXTEEN);   | 16х  | +/-0.256V | 1bit = 0.0078125mV |
   ads.begin();
   ads.setGain(GAIN_TWOTHIRDS);
-  
+
 }
 
 void loop()
@@ -241,12 +249,15 @@ void loop()
   ArduinoOTA.handle();
 
   MainSett[0] = "Freq: " + String(DisplayedFrequency, 4) + " " + frequency_unit;
-  MainSett[1] = "STEP: " + String(frequencyStep) + "Hz";
-  MainSett[2] = "PWM: " + String(PWM/10) + "%";
-  MainSett[3] = "PWM STEP: " + String(PWM_step/10) + "%";
+  MainSett[1] ="STEP: " + String(DisplayedFrequencyStep) + " " + frequency_step_unit;
+  MainSett[2] = "PWM: " + String(PWM/10) + " %";
+  MainSett[3] = "PWM STEP: " + String(PWM_step/10) + " %";
   Settings[0] = "Main menu style: " + String(SelectColor);
-  Memory[1] = "Memory PWM: " + String(MemoryPWM) + "%";
-  ModFreq[0] = "M.Freq: " + String(DisplayedModulationFrequency, 4) + ModulationFrequencyUnit;
+  Memory[1] = "Memory PWM: " + String(MemoryPWM) + " %";
+  ModFreq[0] = "M. Freq: " + String(DisplayedModulationFrequency, 4) + " " + ModulationFrequencyUnit;
+  ModFreq[1] = "M. Step: " + String(DisplayedModulationFrequencyStep) + " " + ModulationFrequencyStepUnit;
+  ModFreq[2] = "M. DUTY: " + String(ModulationDuty) + " %";
+  ModFreq[3] = "M. DUTY STEP:" + String(ModulationDutyStep) + " %";
   dds.setfreq(frequency, 0);
   // считываем с АЦП ADS1115 
   // adc0 = ads.readADC_SingleEnded(0); // (0) - номер канала
@@ -282,6 +293,37 @@ void loop()
     DisplayedMemoryFrequency = MemoryFrequency * 0.000001;
     frequency_memory_unit =  frequency_units[2];
   }
+if(frequencyStep <= 999)
+  {
+    DisplayedFrequencyStep = frequencyStep;
+    frequency_step_unit = frequency_units[0];
+  }
+if(frequencyStep > 999)
+  {
+    DisplayedFrequencyStep = frequencyStep * 0.001;
+    frequency_step_unit = frequency_units[1];
+  }
+if(frequencyStep > 999999)
+  {
+    DisplayedFrequencyStep = frequencyStep * 0.000001;
+    frequency_step_unit = frequency_units[2];
+  }
+
+  if(ModulationFrequencyStep <= 999)
+  {
+    DisplayedModulationFrequencyStep = ModulationFrequencyStep;
+    ModulationFrequencyStepUnit = frequency_units[0];
+  }
+  if(ModulationFrequencyStep > 999)
+  {
+    DisplayedModulationFrequencyStep = ModulationFrequencyStep * 0.001;
+    ModulationFrequencyStepUnit = frequency_units[1];
+  }
+  if(ModulationFrequencyStep > 999999)
+  {
+    DisplayedModulationFrequencyStep = ModulationFrequencyStep * 0.000001;
+    ModulationFrequencyStepUnit = frequency_units[2];
+  }
   Memory[0] = "Freq. memory: " + String(DisplayedMemoryFrequency) + " " + frequency_memory_unit;
   String RealTime = String(hour()) + ":" + String(minute()) + ":" + String(second());
   String RealData = String(day()) + "-" + String(month()) + "-" + String(year());
@@ -294,7 +336,7 @@ void loop()
       menu.DrawIP(IP);
       menu.DrawFrequency(DisplayedFrequency, frequency, frequency_unit);
       menu.DrawPWM(PWM/10);
-      menu.DrawFrequencyStep(frequencyStep);
+      menu.DrawFrequencyStep(DisplayedFrequencyStep, frequency_step_unit);
       menu.DrawCurrent(Current);
       menu.DrawDutyTime(DutyTime, TimeUnits);
       menu.DrawStepDutyTime(StepDutyTime, StepUnits);
@@ -328,7 +370,7 @@ void loop()
 
     if (OldFrequencyStep != frequencyStep)
     {
-      menu.DrawFrequencyStep(frequencyStep);
+      menu.DrawFrequencyStep(DisplayedFrequencyStep, frequency_step_unit);
 
       OldFrequencyStep = frequencyStep;
     }
@@ -376,7 +418,7 @@ void loop()
     }
     // put your main code here, to run repeatedly:
 
-    if (enc1.left())
+    if (enc1.left() or btn_5.get())
     {
       if ((frequency - frequencyStep) >= 0)
       {
@@ -387,7 +429,7 @@ void loop()
         frequency = 0;
       }
     }
-    else if (enc1.right())
+    else if (enc1.right() or btn_4.get())
     {
       frequency += frequencyStep;
     }
@@ -432,6 +474,14 @@ void loop()
       frequencyStep = frequencySteps[i];
     }
 
+    if(btn_2.get())
+    {
+      Modflag = true;
+    }
+    if(btn_3.get())
+    {
+      Modflag = false;
+    }
     if (btn_12.get())
     {
       preferences.putFloat("freq_memory", frequency);
@@ -568,13 +618,13 @@ void loop()
           SubMenuflag = false;
           Selectedflag = true;
         }
-      if(enc1.left())
+      if(enc1.right())
         {
           SelectCounter++;
           SelectCounter = (SelectCounter > 8) ? 1 : SelectCounter;
           Selectedflag = true;
         }
-      if(enc1.right())
+      if(enc1.left())
         {
           SelectCounter--;
           SelectCounter = (SelectCounter < 1) ? 8 : SelectCounter;
@@ -650,7 +700,22 @@ void loop()
                   i++;
                 }
                 frequencyStep = frequencySteps[i];
-                MainSett[1] ="STEP: " + String(frequencySteps[i]) + "Hz";
+                  if(frequencyStep <= 999)
+                  {
+                    DisplayedFrequencyStep = frequencyStep;
+                    frequency_step_unit = frequency_units[0];
+                  }
+                  if(frequencyStep > 999)
+                    {
+                      DisplayedFrequencyStep = frequencyStep * 0.001;
+                      frequency_step_unit = frequency_units[1];
+                    }
+                  if(frequencyStep > 999999)
+                  {
+                    DisplayedFrequencyStep = frequencyStep * 0.000001;
+                    frequency_step_unit = frequency_units[2];
+                  }
+                MainSett[1] ="STEP: " + String(DisplayedFrequencyStep) + " " + frequency_step_unit;
                 menu.printFromMassive(1);
               }
               else if(enc1.left())
@@ -660,7 +725,22 @@ void loop()
                     i--;
                   }
                   frequencyStep = frequencySteps[i];
-                  MainSett[1] ="STEP: " + String(frequencySteps[i]) + "Hz";
+                  if(frequencyStep <= 999)
+                  {
+                    DisplayedFrequencyStep = frequencyStep;
+                    frequency_step_unit = frequency_units[0];
+                  }
+                  if(frequencyStep > 999)
+                    {
+                      DisplayedFrequencyStep = frequencyStep * 0.001;
+                      frequency_step_unit = frequency_units[1];
+                    }
+                  if(frequencyStep > 999999)
+                  {
+                    DisplayedFrequencyStep = frequencyStep * 0.000001;
+                    frequency_step_unit = frequency_units[2];
+                  }
+                  MainSett[1] ="STEP: " + String(DisplayedFrequencyStep) + " " + frequency_step_unit;
                   menu.printFromMassive(1);
                 }
             break;
@@ -740,7 +820,7 @@ void loop()
                 DisplayedModulationFrequency = ModulationFrequency * 0.000001;
                 ModulationFrequencyUnit = frequency_units[2];
               }
-            ModFreq[0] = "M.Freq: " + String(DisplayedModulationFrequency, 4) + " " + ModulationFrequencyUnit;
+            ModFreq[0] = "M. Freq: " + String(DisplayedModulationFrequency, 4) + " " + ModulationFrequencyUnit;
             menu.printFromModulation(0);
           }
           if(enc1.left())
@@ -768,20 +848,117 @@ void loop()
                 DisplayedModulationFrequency = ModulationFrequency * 0.000001;
                 ModulationFrequencyUnit = frequency_units[2];
               }
-            ModFreq[0] = "M.Freq: " + String(DisplayedModulationFrequency, 4) + " " + ModulationFrequencyUnit;
+            ModFreq[0] = "M. Freq: " + String(DisplayedModulationFrequency, 4) + " " + ModulationFrequencyUnit;
             menu.printFromModulation(0);
           }
           break;
         case 2:
-          if()
+          if(enc1.right())
           {
-
+            if(ModulationFrequencyStepSelector < (sizeof(ModulationFrequencySteps)/sizeof(ModulationFrequencySteps[0])) - 1)
+            {
+              ModulationFrequencyStepSelector++;
+              ModulationFrequencyStep = ModulationFrequencySteps[ModulationFrequencyStepSelector];
+            }
+            if(ModulationFrequencyStep <= 999)
+              {
+                DisplayedModulationFrequencyStep = ModulationFrequencyStep;
+                ModulationFrequencyStepUnit = frequency_units[0];
+              }
+            if(ModulationFrequencyStep > 999)
+              {
+                DisplayedModulationFrequencyStep = ModulationFrequencyStep * 0.001;
+                ModulationFrequencyStepUnit = frequency_units[1];
+              }
+            if(ModulationFrequencyStep > 999999)
+              {
+                DisplayedModulationFrequencyStep = ModulationFrequencyStep * 0.000001;
+                ModulationFrequencyStepUnit = frequency_units[2];
+              }
+            ModFreq[1] = "M. Step: " + String(DisplayedModulationFrequencyStep) + " " + ModulationFrequencyStepUnit;
+            menu.printFromModulation(1);
           }
-          if()
+          if(enc1.left())
           {
-
+            if(ModulationFrequencyStepSelector > 0)
+            {
+              ModulationFrequencyStepSelector--;
+              ModulationFrequencyStep = ModulationFrequencySteps[ModulationFrequencyStepSelector];
+            }
+            if(ModulationFrequencyStep <= 999)
+              {
+                DisplayedModulationFrequencyStep = ModulationFrequencyStep;
+                ModulationFrequencyStepUnit = frequency_units[0];
+              }
+            if(ModulationFrequencyStep > 999)
+              {
+                DisplayedModulationFrequencyStep = ModulationFrequencyStep * 0.001;
+                ModulationFrequencyStepUnit = frequency_units[1];
+              }
+            if(ModulationFrequencyStep > 999999)
+              {
+                DisplayedModulationFrequencyStep = ModulationFrequencyStep * 0.000001;
+                ModulationFrequencyStepUnit = frequency_units[2];
+              }
+            ModFreq[1] = "M. Step: " + String(DisplayedModulationFrequencyStep) + " " + ModulationFrequencyStepUnit;
+            menu.printFromModulation(1);
           }
           break;
+
+        case 3:
+        if(enc1.right())
+        {
+          if((ModulationDuty + ModulationDutyStep) <= 100)
+          {
+            ModulationDuty += ModulationDutyStep;
+          }
+          if((ModulationDuty + ModulationDutyStep) > 100)
+          {
+            ModulationDuty = 100;
+          }
+          ModFreq[2] = "M. DUTY: " + String(ModulationDuty) + " %";
+          menu.printFromModulation(2);
+        }
+        
+        if(enc1.left())
+        {
+          if((ModulationDuty - ModulationDutyStep) > 0)
+          {
+            ModulationDuty -= ModulationDutyStep;
+          }
+          if((ModulationDuty - ModulationDutyStep) <= 0)
+          {
+            ModulationDuty = 0;
+          }
+          ModFreq[2] = "M. DUTY: " + String(ModulationDuty) + " %";
+          menu.printFromModulation(2);
+        }
+          break;
+
+        case 4:
+        if(enc1.right())
+        {
+          if(ModulationDutyStepSelector < (sizeof(ModulationDutySteps)/sizeof(ModulationDutySteps[0]) - 1))
+          {
+            ModulationDutyStepSelector++;
+          }
+          ModulationDutyStep = ModulationDutySteps[ModulationDutyStepSelector];
+          ModFreq[3] = "M. DUTY STEP:" + String(ModulationDutyStep) + " %";
+          menu.printFromModulation(3);
+          
+        }
+        if(enc1.left())
+        {
+          if(ModulationDutyStepSelector > 0)
+          {
+            ModulationDutyStepSelector--;
+          }
+          ModulationDutyStep = ModulationDutySteps[ModulationDutyStepSelector];
+          ModFreq[3] = "M. DUTY STEP:" + String(ModulationDutyStep) + " %";
+          menu.printFromModulation(3);
+        }
+          break;
+
         default:
           break;
         }
@@ -848,4 +1025,25 @@ void loop()
   dacValue = constrain(dacValue, 30, 1260);
   dac.setValue(dacValue);
   dds.setfreq(frequency,0);
+  if(Modflag)
+  {
+    if(ModulationDuty != OldModulationDuty or ModulationFrequency != OldModulationFrequency)
+    {
+      if(ModulationFrequency != 0)
+      {
+        ledcSetup(11, ModulationFrequency, 8);
+        ledcWrite(11, map(ModulationDuty, 0, 100, 0, 255));
+      }
+      if(ModulationFrequency == 0)
+      {
+        ledcSetup(11, 0, 8);
+        ledcWrite(11, 0);
+      }
+    }
+  }
+  if(!Modflag)
+  {
+    ledcSetup(11, 0, 8);
+    ledcWrite(11, 0);
+  }
 }

@@ -17,10 +17,10 @@ String MainSett[] = {"Freq: 0.0000 ",
                      "PWM STEP: 5%",
                      "Current Factor"};
 
-String ModFreq[] = {"M.Freq",
-                    "M.Step",
-                    "MOD DUTY STEP",
-                    "MOD DUTY"};
+String ModFreq[] = {"M. Freq",
+                    "M. Step",
+                    "M. DUTY ",
+                    "M. DUTY STEP"};
 
 String Memory[] = {"Memory freq",
                    "Memory PWM",
@@ -138,14 +138,15 @@ void Menu::DrawBitmaps()
   tft.drawBitmap(425, 10, Battery_2, 25, 25, TextColors[SelectColor]);
 }
 
-void Menu::DrawFrequencyStep(float frequencyStep)
+void Menu::DrawFrequencyStep(float frequencyStep, String Unit)
 {
+  
   tft.fillRect(30, 62, 200, 30, BackgroundColor[SelectColor]);
   tft.setCursor(30, 85);
   tft.setTextColor(TextColors[SelectColor]);
   tft.print("STEP: ");
   tft.print(frequencyStep);
-  tft.print("Hz");
+  tft.print(" " + Unit);
 }
 
 void Menu::DrawCurrent(float Current)
