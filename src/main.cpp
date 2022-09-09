@@ -1,8 +1,9 @@
 #include <Arduino.h>
 #include <Menu.h>
 
-#include <Adafruit_ADS1X15.h>
-Adafruit_ADS1115 ads;
+#include <Wire.h>
+#include <Adafruit_ADS1015.h>
+Adafruit_ADS1115 ads(0x48);
 
 #include <WiFi.h>
 #include <ESPmDNS.h>
@@ -15,6 +16,8 @@ Adafruit_ADS1115 ads;
 #include <AD9850_2.h>
 AD9850 dds;
 #include <EncButton.h>
+EncButton<EB_TICK, 32, 33> enc1;
+EncButton<EB_TICK, 14, 4> enc2;
 // #include <string>
 // #include <iostream>
 #include <MCP4725.h>// Підключення бібліотеки для роботи з ЦАП MCP4725
@@ -26,13 +29,15 @@ MCP4725 dac(0x60);// Створення об'єкту dac і задання йо
 #include <Preferences.h>
 Preferences preferences;
 
+#define MY_PERIOD 500  // период в мс
+uint32_t tmr1; 
+
 float frequency_memory = 0;
 float PWM_memory = 0;
 float frequency_modulation_memory = 0;
 float PWM_modulation_memory = 0;
 
-EncButton<EB_TICK, 32, 33> enc1;
-EncButton<EB_TICK, 14, 4> enc2;
+
 
 const char *ssid = "L132.4GHz";
 const char *password = "Des1229des";
@@ -118,6 +123,9 @@ String ModulationFrequencyUnit = frequency_units[0];
 
 float Current = 1.0;
 float OldCurrent;
+int CurrentFactor = 20;
+float voltage;
+float StartVoltage = 0;
 
 float MemoryFrequency = 0;
 float OldMemoryFrequency;
@@ -158,7 +166,6 @@ float adc0;
 void setup()
 {
   dds.setup();
-
   Serial.begin(115200);
   Serial.println("1");
 
@@ -179,8 +186,7 @@ void setup()
   dds.setup();
 
   timeClient.begin();
-  timeClient.setTimeOffset(10800)
-  ;
+  timeClient.setTimeOffset(10800);
   mcp.begin_I2C(0x20);
 
   while (!timeClient.update())
@@ -236,9 +242,20 @@ void setup()
   // ads.setGain(GAIN_FOUR);      | 4х   | +/-1.024V | 1bit = 0.03125mV   |
   // ads.setGain(GAIN_EIGHT);     | 8х   | +/-0.512V | 1bit = 0.015625mV  |
   // ads.setGain(GAIN_SIXTEEN);   | 16х  | +/-0.256V | 1bit = 0.0078125mV |
-  ads.begin();
   ads.setGain(GAIN_TWOTHIRDS);
+  ads.begin();
+  StartVoltage = (ads.readADC_SingleEnded(0)) * 0.1875;
+        // считываем с АЦП ADS1115
 
+  // unsigned long newTime = millis();
+  // unsigned long oldTime;
+  // bool adsflag = false;
+  // if(( newTime - oldTime) > 1000)
+  // {
+  //   adsflag = true;
+  //   oldTime = millis();
+    
+  // } 
 }
 
 void loop()
@@ -259,9 +276,20 @@ void loop()
   ModFreq[2] = "M. DUTY: " + String(ModulationDuty) + " %";
   ModFreq[3] = "M. DUTY STEP:" + String(ModulationDutyStep) + " %";
   dds.setfreq(frequency, 0);
-  // считываем с АЦП ADS1115 
-  // adc0 = ads.readADC_SingleEnded(0); // (0) - номер канала
-  // float u = adc0 * 0.1875 / 1000.0;
+
+  // if(adsflag)
+  // {
+    if (millis() - tmr1 >= 1000) {  // ищем разницу
+    tmr1 = millis();
+    adc0 = ads.readADC_SingleEnded(0);                   // сброс таймера
+    // выполнить действие
+  }
+  //   adsflag = false;
+  // }
+  //  // (0) - номер канала
+  voltage = adc0 * 0.1875;
+  Current = (voltage - StartVoltage)/CurrentFactor;
+
   if(frequency <= 999)
   {
     DisplayedFrequency = frequency;
@@ -794,6 +822,40 @@ if(frequencyStep > 999999)
               }
             }
             break;
+          case 5:
+          if(enc1.right())
+          {
+            if((CurrentFactor + 1) < 60)
+            {
+              CurrentFactor++;
+              MainSett[4] = "Current Factor: " + String(CurrentFactor);
+              menu.printFromMassive(4);
+            }
+            if((CurrentFactor + 1) >= 60)
+            {
+              CurrentFactor = 60;
+              MainSett[4] = "Current Factor: " + String(CurrentFactor);
+              menu.printFromMassive(4);
+            }
+            
+          }
+          if(enc1.left())
+          { 
+            if((CurrentFactor - 1) > 0)
+            {
+              CurrentFactor--;
+              MainSett[4] = "Current Factor: " + String(CurrentFactor);
+              menu.printFromMassive(4);
+            }
+            if((CurrentFactor - 1) <= 0)
+            {
+              CurrentFactor = 0;
+              MainSett[4] = "Current Factor: " + String(CurrentFactor);
+              menu.printFromMassive(4);
+            }
+            
+          }
+            break;
           default:
             break;
           }
@@ -1027,7 +1089,7 @@ if(frequencyStep > 999999)
   dds.setfreq(frequency,0);
   if(Modflag)
   {
-    if(ModulationDuty != OldModulationDuty or ModulationFrequency != OldModulationFrequency)
+    if(ModulationDuty != OldModulationDuty or ModulationFrequency != OldModulationFrequency or Modflag)
     {
       if(ModulationFrequency != 0)
       {
@@ -1039,6 +1101,8 @@ if(frequencyStep > 999999)
         ledcSetup(11, 0, 8);
         ledcWrite(11, 0);
       }
+      OldModulationDuty = ModulationDuty;
+      OldModulationFrequency = ModulationFrequency;
     }
   }
   if(!Modflag)

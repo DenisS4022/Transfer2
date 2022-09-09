@@ -15,7 +15,7 @@ String MainSett[] = {"Freq: 0.0000 ",
                      "STEP: 1000.00",
                      "PWM: 0%",
                      "PWM STEP: 5%",
-                     "Current Factor"};
+                     "Current Factor: "};
 
 String ModFreq[] = {"M. Freq",
                     "M. Step",
