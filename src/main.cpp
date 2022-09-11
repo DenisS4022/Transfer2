@@ -88,6 +88,9 @@ float Oldfrequency;
 
 float ModulationFrequency;
 float OldModulationFrequency;
+float MemoryModulationFrequency;
+float DisplayedMemoryModulationFrequency;
+float MemoryModulationDuty;
 float ModulationDuty;
 float OldModulationDuty;
 bool Modflag = false;
@@ -115,6 +118,7 @@ String frequency_units[] = {"Hz", "kHz", "MHz",};
 String frequency_unit = "Hz";
 String frequency_step_unit = "Hz";
 String frequency_memory_unit = "Hz";
+String frequency_memory_modulation_unit = "Hz";
 float DisplayedFrequency = 0.0f;
 float DisplayedFrequencyStep = 0;
 float OldFrequencyStep;
@@ -202,6 +206,8 @@ void setup()
 
   MemoryFrequency = preferences.getFloat("freq_memory", 0);
   PWM_memory = preferences.getFloat("PWM_memory", 33);
+  MemoryModulationFrequency = preferences.getFloat("freq_mod_mem", 655555);
+  MemoryModulationDuty = preferences.getFloat("freq_mod_PWM", 99);
 
   if(MemoryFrequency <= 999)
   {
@@ -218,6 +224,22 @@ void setup()
     DisplayedMemoryFrequency = MemoryFrequency * 0.000001;
     frequency_memory_unit =  frequency_units[2];
   }
+  if(MemoryModulationFrequency <= 999)
+  {
+    DisplayedMemoryModulationFrequency = MemoryModulationFrequency;
+    frequency_memory_modulation_unit =  frequency_units[0];
+  }
+  if(MemoryModulationFrequency > 999)
+  {
+    DisplayedMemoryModulationFrequency = MemoryModulationFrequency * 0.001;
+    frequency_memory_modulation_unit =  frequency_units[1];
+  }
+  if(MemoryModulationFrequency > 999999)
+  {
+    DisplayedMemoryModulationFrequency = MemoryModulationFrequency * 0.000001;
+    frequency_memory_modulation_unit =  frequency_units[2];
+  }
+
   menu.start();
   menu.cleanDisplay();
   menu.DrawIP(IP);
@@ -269,8 +291,11 @@ void loop()
   MainSett[1] ="STEP: " + String(DisplayedFrequencyStep) + " " + frequency_step_unit;
   MainSett[2] = "PWM: " + String(PWM/10) + " %";
   MainSett[3] = "PWM STEP: " + String(PWM_step/10) + " %";
+  MainSett[4] = "Current Factor: " + String(CurrentFactor);
   Settings[0] = "Main menu style: " + String(SelectColor);
-  Memory[1] = "Memory PWM: " + String(MemoryPWM) + " %";
+  Memory[1] = "Memory PWM: " + String(MemoryPWM/10) + " %";
+  Memory[2] = "Memory mod. freq: " + String(DisplayedMemoryModulationFrequency) + " " + frequency_memory_modulation_unit;
+  Memory[3] = "Memory mod. PWM: " + String(MemoryModulationDuty) + " %";
   ModFreq[0] = "M. Freq: " + String(DisplayedModulationFrequency, 4) + " " + ModulationFrequencyUnit;
   ModFreq[1] = "M. Step: " + String(DisplayedModulationFrequencyStep) + " " + ModulationFrequencyStepUnit;
   ModFreq[2] = "M. DUTY: " + String(ModulationDuty) + " %";
@@ -336,6 +361,21 @@ if(frequencyStep > 999999)
     DisplayedFrequencyStep = frequencyStep * 0.000001;
     frequency_step_unit = frequency_units[2];
   }
+  if(ModulationFrequency <= 999)
+    {
+                DisplayedModulationFrequency = ModulationFrequency;
+                ModulationFrequencyUnit = frequency_units[0];
+    }
+  if(ModulationFrequency > 999)
+    {
+      DisplayedModulationFrequency = ModulationFrequency * 0.001;
+      ModulationFrequencyUnit = frequency_units[1];
+    }
+  if(ModulationFrequency > 999999)
+    {
+      DisplayedModulationFrequency = ModulationFrequency * 0.000001;
+      ModulationFrequencyUnit = frequency_units[2];
+    }
 
   if(ModulationFrequencyStep <= 999)
   {
@@ -351,6 +391,22 @@ if(frequencyStep > 999999)
   {
     DisplayedModulationFrequencyStep = ModulationFrequencyStep * 0.000001;
     ModulationFrequencyStepUnit = frequency_units[2];
+  }
+  
+  if(MemoryModulationFrequency <= 999)
+  {
+    DisplayedMemoryModulationFrequency = MemoryModulationFrequency;
+    frequency_memory_modulation_unit =  frequency_units[0];
+  }
+  if(MemoryModulationFrequency > 999)
+  {
+    DisplayedMemoryModulationFrequency = MemoryModulationFrequency * 0.001;
+    frequency_memory_modulation_unit =  frequency_units[1];
+  }
+  if(MemoryModulationFrequency > 999999)
+  {
+    DisplayedMemoryModulationFrequency = MemoryModulationFrequency * 0.000001;
+    frequency_memory_modulation_unit =  frequency_units[2];
   }
   Memory[0] = "Freq. memory: " + String(DisplayedMemoryFrequency) + " " + frequency_memory_unit;
   String RealTime = String(hour()) + ":" + String(minute()) + ":" + String(second());
@@ -392,14 +448,14 @@ if(frequencyStep > 999999)
     if (OldPWM != PWM)
     {
       menu.DrawPWM(PWM/10);
-      esp.MQTT_pub("PWM3", PWM);
+      esp.MQTT_pub("PWM3", PWM/10);
       OldPWM = PWM;
     }
 
     if (OldFrequencyStep != frequencyStep)
     {
       menu.DrawFrequencyStep(DisplayedFrequencyStep, frequency_step_unit);
-
+      esp.MQTT_pub("step1", frequencyStep);
       OldFrequencyStep = frequencyStep;
     }
 
@@ -514,13 +570,20 @@ if(frequencyStep > 999999)
     {
       preferences.putFloat("freq_memory", frequency);
       MemoryFrequency = frequency;
+      esp.MQTT_pub("mem2", MemoryFrequency);
       preferences.putFloat("PWM_memory", PWM);
       MemoryPWM = PWM;
+      preferences.putFloat("freq_mod_mem", ModulationFrequency);
+      MemoryModulationFrequency = ModulationFrequency;
+      preferences.putFloat("freq_mod_PWM", ModulationDuty);
+      MemoryModulationDuty = ModulationDuty;
     }
     if (btn_13.get())
     {
       frequency = preferences.getFloat("freq_memory", 333333);
       PWM = preferences.getFloat("PWM_memory", 33);
+      ModulationFrequency = preferences.getFloat("freq_mod_mem", 555555);
+      ModulationDuty = preferences.getFloat("freq_mod_PWM", 99);
       preferences.end();
     }
     if (esp.status())
@@ -883,6 +946,7 @@ if(frequencyStep > 999999)
                 ModulationFrequencyUnit = frequency_units[2];
               }
             ModFreq[0] = "M. Freq: " + String(DisplayedModulationFrequency, 4) + " " + ModulationFrequencyUnit;
+            esp.MQTT_pub("freqmod2", ModulationFrequency);
             menu.printFromModulation(0);
           }
           if(enc1.left())
@@ -911,6 +975,7 @@ if(frequencyStep > 999999)
                 ModulationFrequencyUnit = frequency_units[2];
               }
             ModFreq[0] = "M. Freq: " + String(DisplayedModulationFrequency, 4) + " " + ModulationFrequencyUnit;
+            esp.MQTT_pub("freqmod2", ModulationFrequency);
             menu.printFromModulation(0);
           }
           break;
@@ -938,6 +1003,7 @@ if(frequencyStep > 999999)
                 ModulationFrequencyStepUnit = frequency_units[2];
               }
             ModFreq[1] = "M. Step: " + String(DisplayedModulationFrequencyStep) + " " + ModulationFrequencyStepUnit;
+            esp.MQTT_pub("mod.step1", ModulationFrequencyStep);
             menu.printFromModulation(1);
           }
           if(enc1.left())
@@ -963,6 +1029,7 @@ if(frequencyStep > 999999)
                 ModulationFrequencyStepUnit = frequency_units[2];
               }
             ModFreq[1] = "M. Step: " + String(DisplayedModulationFrequencyStep) + " " + ModulationFrequencyStepUnit;
+            esp.MQTT_pub("mod.step1", ModulationFrequencyStep);
             menu.printFromModulation(1);
           }
           break;
