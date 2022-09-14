@@ -595,7 +595,7 @@ if(frequencyStep > 999999)
       MQTT = " MQTT - OFF";
     }
 
-    period = (1 / frequency) / 100;
+    period = (1 / frequency) / 10;
     DutyTime = period * PWM;
     if (DutyTime <= 0.01 and DutyTime >= 1.0e-3)
     {
@@ -615,17 +615,17 @@ if(frequencyStep > 999999)
 
     if (period <= 0.01 and period >= 1.0e-3)
     {
-      StepDutyTime = period * 100;
+      StepDutyTime = period * PWM_step * 100;
       StepUnits = " ms";
     }
     else if (period <= 1.0e-3 and period >= 1.0e-6)
     {
-      StepDutyTime = period * 1000000;
+      StepDutyTime = period * PWM_step * 1000000;
       StepUnits = " mks";
     }
     else if (period <= 1.0e-6)
     {
-      StepDutyTime = period * 1000000000;
+      StepDutyTime = period * PWM_step * 1000000000;
       StepUnits = " ns";
     }
     if (frequency == 0)
